@@ -1,0 +1,8 @@
+# files
+*.csv
+emotions_data.txt
+*.png
+
+# environment
+facial_env/
+env/
