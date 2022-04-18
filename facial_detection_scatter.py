@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import tensorflow as tf
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 # classifier type
 face_detection = cv2.CascadeClassifier('haar_cascade_face_detection.xml')
@@ -21,6 +22,11 @@ settings = {
 #labels = ['Surprise', 'Neutral', 'Anger', 'Happy', 'Sad']
 labels = ['Surpresa', 'Neutro', 'Raiva', 'Feliz', 'Triste']
 model = tf.keras.models.load_model('network-5Labels.h5')
+
+# data storage
+measures = open("emotions_data.txt", "w+")
+columns = f'time_data,surpresa,neutro,raiva,feliz,triste,state\n'
+measures.write(columns)
 
 # detection
 while True:
@@ -48,37 +54,84 @@ while True:
 
 		## chart creation
 
-		# barplot
-		probs = model.predict(np.array([face.reshape((48,48,1))]))[0]
-		plt.bar(labels, probs)
+		# emotions
+		surpresa = model.predict(np.array([face.reshape((48,48,1))]))[0][0]
+		neutro = model.predict(np.array([face.reshape((48,48,1))]))[0][1]
+		raiva = model.predict(np.array([face.reshape((48,48,1))]))[0][2]
+		feliz = model.predict(np.array([face.reshape((48,48,1))]))[0][3]
+		triste = model.predict(np.array([face.reshape((48,48,1))]))[0][4]
 
-		# # test
-		# surpresa = model.predict(np.array([face.reshape((48,48,1))]))[0][0]
-		# neutro = model.predict(np.array([face.reshape((48,48,1))]))[0][1]
-		# raiva = model.predict(np.array([face.reshape((48,48,1))]))[0][2]
-		# feliz = model.predict(np.array([face.reshape((48,48,1))]))[0][3]
-		# triste = model.predict(np.array([face.reshape((48,48,1))]))[0][4]
+		# x axis
+		if surpresa > raiva:
+			x_ = surpresa
+		else:
+			x_ = -1 * raiva
 
-		# x_ = surpresa - raiva
-		# y_ = feliz - triste
+		# y axis
+		if feliz > triste:
+			y_ = feliz
+		else:
+			y_ = -1 * triste
 		
-		# ax_test.scatter(x_, y_)
+		# chart axis
+		ax = plt.gca()
+		ax.spines['left'].set_position('center')
+		ax.spines['bottom'].set_position('center')
+		ax.spines['right'].set_color('none')
+		ax.spines['top'].set_color('none')
+		ax.xaxis.set_ticks_position('bottom')
+		ax.yaxis.set_ticks_position('left')
+		ax.xaxis.set_major_locator(plt.MaxNLocator(4))
+		ax.yaxis.set_major_locator(plt.MaxNLocator(4))
+		
+		ax.set_ylabel('Tristeza    -    Felicidade')
+		ax.yaxis.set_label_coords(-0.05, 0.5)
+
+		ax.set_xlabel('Raiva    -    Surpresa')
+		ax.xaxis.set_label_coords(0.5, -0.05)
+		
+		plt.xlim(-1, 1)
+		plt.ylim(-1, 1)
+
+		# colors
+		if x_ > 0 and y_ > 0:
+			c_ = 'blue'
+		elif x_ < 0 and y_ < 0:
+			c_ = 'red'
+		elif x_ > 0 and y_ < 0:
+			c_ = 'yellow'
+		else:
+			c_ = 'green'
+			
+		# circle
+		angle = np.linspace( 0 , 2 * np.pi , 150 )
+		radius = 1
+		x = radius * np.cos( angle )
+		y = radius * np.sin( angle ) 
+
+		# plot
+		ax.plot(x, y, c = 'black', linestyle = 'dashed', linewidth=0.9)
+		ax.scatter(x_, y_, color = c_)
 		
 		# if i % 10 == 0:
 		# 	plt.clf()
+		
+		# storage
+		time_data = datetime.now()
+		emotions_data = f'{time_data},{surpresa},{neutro},{raiva},{feliz},{triste},{state}\n'
+		measures.write(emotions_data)
 	
 	## show plots and imags
-	plt.savefig('face_barplot.png')
-	plt.close()
-	img_face_barplot = cv2.imread('face_barplot.png')
-	
+	plt.savefig('face_scatterplot.png')
+	img_face_scatterplot = cv2.imread('face_scatterplot.png')
 	
 	# show face classification
 	cv2.imshow('Facial Expression', img)
-	cv2.imshow('Bar plot probabilities', img_face_barplot)
+	cv2.imshow('Scatter plot probabilities', img_face_scatterplot)
 	
 
 	if cv2.waitKey(5) != -1:
+		measures.close()
 		break
 
 camera.release()
